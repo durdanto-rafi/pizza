@@ -4,10 +4,15 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
 </head>
 
 <body screen_capture_injected="true">
     <div id="main">
+        <div class="alert alert-danger print-error-msg" style="display:none">
+            <ul></ul>
+        </div>
+
         <div class="spc-container">
             <h1 style="color:#17526e;"> Pizza Order </h1>
             <form id="quoteform" class="fixed-total simple-price-calc">
@@ -187,11 +192,13 @@
         {
             if($.isNumeric(this.value))
             {
-                $("#simple-price-total-num").text("$" + getselectedPrice()  * parseInt(this.value));
+                totalPrice = getselectedPrice()  * parseInt(this.value)
+                $("#simple-price-total-num").text("$" + totalPrice);
             }
         });
 
         $('#submit').click(function () {
+            var orderDetails = {}
             var token = $("input[name='_token']").val();
 
             var name = $("#txtName").val();
@@ -202,25 +209,60 @@
             var state = $("#txtState").val();
             var postcode = $("#txtPostcode").val();
             var product = $('#ddlProduct :selected').data('label')
+            var price = parseInt($('select option:selected').val());
 
-            var doubleCheese = $('#chkDoubleCheese').is(":checked")
-            var doubleVeggies = $('#chkDoubleVeggies').is(":checked")
-            var extraSauce = $('#chkExtraSauce').is(":checked")
+            var doubleCheese;
+            if($('#chkDoubleCheese').is(":checked"))
+            {
+                doubleCheese = $('#chkDoubleCheese').val();
+            }
 
-            var val = $('input[name=css]:checked').val();
-                
+            var doubleVeggies;
+            if($('#chkDoubleVeggies').is(":checked"))
+            {
+                doubleVeggies = $('#chkDoubleVeggies').val();
+            }
+
+            var extraSauce;
+            if($('#chkExtraSauce').is(":checked"))
+            {
+                extraSauce = $('#chkExtraSauce').val();
+            }
+
+            var delivery = $('input[name=css]:checked').val();
+            var quantity = $("#txtQuantity").val();
+            var total = totalPrice
+            //console.log(total.replace($, ''))
             
             //console.log(getFormDataToObject($('#quoteform')))
             $.ajax({
                 url: "{{ route('store') }}",
                 method: 'POST',
-                data: { _token: token, name: name, email: email, phone: phone, street: street, suburb: suburb, state: state, 
-                        postcode: postcode, product: product, doubleCheese: doubleCheese , doubleVeggies: doubleVeggies, 
-                        extraSauce: extraSauce, extraSauce: extraSauce},
+                data: { _token: token, name: name, email: email, phone: phone, street_address: street, suburb: suburb, state: state, 
+                        postcode: postcode, product_name: product, price: price, doubleCheese: doubleCheese , doubleVeggies: doubleVeggies, 
+                        extraSauce: extraSauce,  delivery: delivery, quantity: quantity, total_amount: total},
                 success: function (data) {
-                    
+                    if($.isEmptyObject(data.error))
+                    {
+	                	alert(data.success);
+	                }
+                    else
+                    {
+	                	printErrorMsg(data.error);
+	                }
                 }
             });
+
+            
+        });
+
+        $("#txtQuantity").keypress(function (e) {
+            //if the letter is not digit then display error and don't type anything
+            if (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)) {
+                //display error message
+                $("#errmsg").html("Digits Only").show().fadeOut("slow");
+                    return false;
+            }
         });
     });
 
@@ -257,23 +299,56 @@
         return total;
     }
 
-    // Converting form data into array
-    function getFormDataToObject(form){
-        var un_array = form.serializeArray();
-        var _array = {};
-        $.map(un_array, function(n, i){
-            if(n.name.indexOf('[') > -1 ){
-                var array = n.name.match(/\[(.*?)\]/);
-                var key = n.name.replace(array[1],"").replace('[',"").replace(']',"");
-                if(!_array[key]){
-                    _array[key] = {};
+    function printErrorMsg (msg) 
+    {
+        $(".print-error-msg").find("ul").html('');
+        $(".print-error-msg").css('display','block');
+        $.each( msg, function( key, value ) {
+            $(".print-error-msg").find("ul").append('<li>'+value+'</li>');
+        });
+    }
+
+    function formToString(filledForm) {
+        formObject = new Object
+        filledForm.find("input, select, textarea").each(function() {
+            if (this.id) {
+                elem = $(this);
+                if (elem.attr("type") == 'checkbox' || elem.attr("type") == 'radio') {
+                    formObject[this.id] = elem.attr("checked");
+                } else {
+                    formObject[this.id] = elem.val();
                 }
-                _array[key][array[1]] = n['value'];
-            }else{
-                _array[n['name']] = n['value'];
             }
         });
-        return _array;
+        formString = JSON.stringify(formObject);
+        return formString;
+    }
+
+    function stringToForm(formString, unfilledForm) {
+        formObject = JSON.parse(formString);
+        unfilledForm.find("input, select, textarea").each(function() {
+            if (this.id) {
+                id = this.id;
+                elem = $(this); 
+                if (elem.attr("type") == "checkbox" || elem.attr("type") == "radio" ) {
+                    elem.attr("checked", formObject[id]);
+                } else {
+                    elem.val(formObject[id]);
+                }
+            }
+        });
+    }
+
+    window.onbeforeunload = function() 
+    {
+        var formString = formToString($("#quoteform"));
+        localStorage.setItem('formData', formString);
+    }
+
+    window.onload = function() 
+    {
+        var formString = localStorage.getItem('formData');
+        stringToForm(formString, $("#quoteform"));
     }
 </script>
 
