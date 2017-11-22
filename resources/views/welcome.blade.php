@@ -11,26 +11,27 @@
         <div class="spc-container">
             <h1 style="color:#17526e;"> Pizza Order </h1>
             <form id="quoteform" class="fixed-total simple-price-calc">
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
                 <h2> Product Type</h2>
                 <fieldset>
                     <legend>Personal Information</legend>
                     <h4>Name: </h4>
-                    <input type="text" id="features3" data-label="Name">
+                    <input name="name" type="text" id="txtName" data-label="Name">
                     <h4>Email: </h4>
-                    <input type="text" id="features4" data-label="Email">
+                    <input name="email"  type="text" id="txtEmail" data-label="Email">
                     <h4>Phone: </h4>
-                    <input type="text" id="features4" data-label="Phone">
+                    <input name="phone"  type="text" id="txtPhone" data-label="Phone">
 
                     <h4>(Google Address - Australia only)</h4>
                     <h4>Street Address:</h4>
-                    <input type="text" id="address" value="Your Address">
+                    <input type="text" id="txtStreet" value="Your Address">
                     <h4>Suburb</h4>
-                    <input type="text" id="address" value="Your Address">
+                    <input type="text" id="txtSuburb" value="Your Address">
                     <h4>State</h4>
-                    <input type="text" id="address" value="Your Address">
+                    <input type="text" id="txtState" value="Your Address">
                     <h4>Postcode</h4>
                     <p>
-                        <input type="text" id="address" value="Your Address">
+                        <input type="text" id="txtPostcode" value="Your Address">
                     </p>
                     <p>&nbsp; </p>
                 </fieldset>
@@ -55,7 +56,7 @@
                     <h2>Quantity</h2>
                     <input type="text" id="txtQuantity" data-label="Quantity">
                     <br>
-                    <button id="submit">Submit</button>
+                    <button id="submit" onclick="return false;">Submit</button>
                 </fieldset>
                 <div id="sidebar">
                     <div id="simple-price-total">
@@ -189,16 +190,39 @@
                 $("#simple-price-total-num").text("$" + getselectedPrice()  * parseInt(this.value));
             }
         });
-    });
 
-    function updateTotalPrice(totalAmount)
-    {
-        //$("#simple-price-total-num").text("$" +totalAmount);
-        //$("#parOrderDetails").html(orderDetails.join("<br>"))
-        $.each(orderDetails , function(i, value) { 
-            console.log(value) 
+        $('#submit').click(function () {
+            var token = $("input[name='_token']").val();
+
+            var name = $("#txtName").val();
+            var email = $("#txtEmail").val();
+            var phone = $("#txtPhone").val();
+            var street = $("#txtStreet").val();
+            var suburb = $("#txtSuburb").val();
+            var state = $("#txtState").val();
+            var postcode = $("#txtPostcode").val();
+            var product = $('#ddlProduct :selected').data('label')
+
+            var doubleCheese = $('#chkDoubleCheese').is(":checked")
+            var doubleVeggies = $('#chkDoubleVeggies').is(":checked")
+            var extraSauce = $('#chkExtraSauce').is(":checked")
+
+            var val = $('input[name=css]:checked').val();
+                
+            
+            //console.log(getFormDataToObject($('#quoteform')))
+            $.ajax({
+                url: "{{ route('store') }}",
+                method: 'POST',
+                data: { _token: token, name: name, email: email, phone: phone, street: street, suburb: suburb, state: state, 
+                        postcode: postcode, product: product, doubleCheese: doubleCheese , doubleVeggies: doubleVeggies, 
+                        extraSauce: extraSauce, extraSauce: extraSauce},
+                success: function (data) {
+                    
+                }
+            });
         });
-    }
+    });
 
     function updateInfo()
     {
@@ -231,6 +255,25 @@
         });
 
         return total;
+    }
+
+    // Converting form data into array
+    function getFormDataToObject(form){
+        var un_array = form.serializeArray();
+        var _array = {};
+        $.map(un_array, function(n, i){
+            if(n.name.indexOf('[') > -1 ){
+                var array = n.name.match(/\[(.*?)\]/);
+                var key = n.name.replace(array[1],"").replace('[',"").replace(']',"");
+                if(!_array[key]){
+                    _array[key] = {};
+                }
+                _array[key][array[1]] = n['value'];
+            }else{
+                _array[n['name']] = n['value'];
+            }
+        });
+        return _array;
     }
 </script>
 
